@@ -1,4 +1,4 @@
-# Fork of discord-commits. Original author: https://github.com/itz-coffee
+# discord-commits. Original author: https://github.com/itz-coffee
 A GitHub action that publishes any commits to Discord
 
 # Key Differences
