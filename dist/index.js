@@ -13942,7 +13942,7 @@ function sendTest() {
         const res = yield (0, node_fetch_1.default)(url, {
             method: "POST",
             body: JSON.stringify({
-                username: "Discord Commits",
+                username: "Commit Notifier",
                 content: testMessage,
                 allowed_mentions: { parse: [] }
             }),

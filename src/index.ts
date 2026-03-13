@@ -11,7 +11,7 @@ async function sendTest(): Promise<void> {
 	let res = await fetch(url, {
 		method: "POST",
 		body: JSON.stringify({
-			username: "Discord Commits",
+			username: "Commit Notifier",
 			content: testMessage,
 			allowed_mentions: { parse: [] }
 		}),
