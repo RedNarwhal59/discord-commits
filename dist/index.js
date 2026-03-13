@@ -13900,13 +13900,14 @@ const core = __importStar(__nccwpck_require__(2186));
 const node_fetch_1 = __importDefault(__nccwpck_require__(4429));
 const utils_1 = __nccwpck_require__(1314);
 const url = core.getInput("webhookUrl").replace("/github", "");
+const testMessage = core.getInput("testMessage");
 const data = github_1.context.payload;
 const [sender, repo, branch, senderUrl, repoUrl] = [
-    data.sender.login,
-    data.repository.name,
+    (data.sender && data.sender.login) || "unknown",
+    (data.repository && data.repository.name) || "unknown",
     github_1.context.ref.replace("refs/heads/", ""),
-    data.sender.html_url,
-    data.repository.html_url
+    (data.sender && data.sender.html_url) || "",
+    (data.repository && data.repository.html_url) || ""
 ];
 const branchUrl = `${repoUrl}/tree/${branch}`;
 const originalFooter = `[${repo}](<${repoUrl}>)/[${branch}](<${branchUrl}>)`;
@@ -13925,7 +13926,7 @@ function send() {
             method: "POST",
             body: JSON.stringify({
                 username: sender,
-                avatar_url: data.sender.avatar_url,
+                avatar_url: data.sender && data.sender.avatar_url,
                 content: content,
                 allowed_mentions: { parse: [] }
             }),
@@ -13936,8 +13937,27 @@ function send() {
         buffer = String();
     });
 }
+function sendTest() {
+    return __awaiter(this, void 0, void 0, function* () {
+        const res = yield (0, node_fetch_1.default)(url, {
+            method: "POST",
+            body: JSON.stringify({
+                username: "Discord Commits",
+                content: testMessage,
+                allowed_mentions: { parse: [] }
+            }),
+            headers: { "Content-Type": "application/json" }
+        });
+        if (!res.ok)
+            core.setFailed(yield res.text());
+    });
+}
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
+        if (testMessage) {
+            yield sendTest();
+            return;
+        }
         if (github_1.context.eventName !== "push")
             return;
         for (const commit of data.commits) {
