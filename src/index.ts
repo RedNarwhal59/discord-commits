@@ -8,11 +8,24 @@ let url = core.getInput("webhookUrl").replace("/github", "")
 let testMessage = core.getInput("testMessage")
 
 async function sendTest(): Promise<void> {
+	let fakeId = [...Array(40)].map(() => Math.floor(Math.random() * 16).toString(16)).join("")
+	let fakeRepo = "https://github.com/TestUser/test-repo"
+	let fakeCommit = {
+		id: fakeId,
+		url: `${fakeRepo}/commit/${fakeId}`,
+		message: testMessage
+	} as any
+
+	let text = generateText(fakeCommit)
+	let fakeBranch = "main"
+	let fakeFooter = `- [TestUser](<${fakeRepo}>) on [test-repo](<${fakeRepo}>)/[${fakeBranch}](<${fakeRepo}/tree/${fakeBranch}>)`
+	let content = text + fakeFooter
+
 	let res = await fetch(url, {
 		method: "POST",
 		body: JSON.stringify({
-			username: "Commit Notifier",
-			content: testMessage,
+			username: "TestUser",
+			content: content,
 			allowed_mentions: { parse: [] }
 		}),
 		headers: { "Content-Type": "application/json" }

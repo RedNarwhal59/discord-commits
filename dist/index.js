@@ -13939,11 +13939,22 @@ function send() {
 }
 function sendTest() {
     return __awaiter(this, void 0, void 0, function* () {
+        const fakeId = [...Array(40)].map(() => Math.floor(Math.random() * 16).toString(16)).join("");
+        const fakeRepo = "https://github.com/TestUser/test-repo";
+        const fakeCommit = {
+            id: fakeId,
+            url: `${fakeRepo}/commit/${fakeId}`,
+            message: testMessage
+        };
+        const text = (0, utils_1.generateText)(fakeCommit);
+        const fakeBranch = "main";
+        const fakeFooter = `- [TestUser](<${fakeRepo}>) on [test-repo](<${fakeRepo}>)/[${fakeBranch}](<${fakeRepo}/tree/${fakeBranch}>)`;
+        const content = text + fakeFooter;
         const res = yield (0, node_fetch_1.default)(url, {
             method: "POST",
             body: JSON.stringify({
-                username: "Commit Notifier",
-                content: testMessage,
+                username: "TestUser",
+                content: content,
                 allowed_mentions: { parse: [] }
             }),
             headers: { "Content-Type": "application/json" }
