@@ -9,6 +9,9 @@ inputs:
   testMessage:
     description: Optional test message to send via workflow_dispatch instead of real commit data.
     required: false
+  testType:
+    description: "Which commit type to test: all, normal, merge, or delete"
+    required: false
 runs:
   using: "node24"
   main: "dist/index.js"

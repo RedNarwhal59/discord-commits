@@ -14062,6 +14062,7 @@ const node_fetch_1 = __importDefault(__nccwpck_require__(4429));
 const utils_1 = __nccwpck_require__(8281);
 let url = core.getInput("webhookUrl").replace("/github", "");
 let testMessage = core.getInput("testMessage");
+let testType = core.getInput("testType") || "all";
 function sendEmbeds(embeds, username, avatarUrl) {
     return __awaiter(this, void 0, void 0, function* () {
         let res = yield (0, node_fetch_1.default)(url, {
@@ -14112,7 +14113,16 @@ function sendTest() {
             modified: [],
             removed: ["lua/weapons/arc9_ak47.lua", "lua/weapons/arc9_m4a1.lua", "lua/weapons/arc9_mp5.lua"]
         };
-        let embeds = [normalCommit, mergeCommit, deleteCommit].map(c => (0, utils_1.generateEmbed)(c, "TestUser", fakeRepo, avatar, "test-repo", fakeRepo, "main"));
+        let commits = [];
+        if (testType === "normal")
+            commits = [normalCommit];
+        else if (testType === "merge")
+            commits = [mergeCommit];
+        else if (testType === "delete")
+            commits = [deleteCommit];
+        else
+            commits = [normalCommit, mergeCommit, deleteCommit];
+        let embeds = commits.map(c => (0, utils_1.generateEmbed)(c, "TestUser", fakeRepo, avatar, "test-repo", fakeRepo, "main"));
         yield sendEmbeds(embeds, "TestUser");
     });
 }

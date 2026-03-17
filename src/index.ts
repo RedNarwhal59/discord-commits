@@ -6,6 +6,7 @@ import { generateEmbed, DiscordEmbed, obfuscate } from "./utils"
 
 let url = core.getInput("webhookUrl").replace("/github", "")
 let testMessage = core.getInput("testMessage")
+let testType = core.getInput("testType") || "all"
 
 async function sendEmbeds(embeds: DiscordEmbed[], username: string, avatarUrl?: string): Promise<void> {
 	let res = await fetch(url, {
@@ -60,7 +61,13 @@ async function sendTest(): Promise<void> {
 		removed: ["lua/weapons/arc9_ak47.lua", "lua/weapons/arc9_m4a1.lua", "lua/weapons/arc9_mp5.lua"]
 	} as any
 
-	let embeds = [normalCommit, mergeCommit, deleteCommit].map(c =>
+	let commits: any[] = []
+	if (testType === "normal") commits = [normalCommit]
+	else if (testType === "merge") commits = [mergeCommit]
+	else if (testType === "delete") commits = [deleteCommit]
+	else commits = [normalCommit, mergeCommit, deleteCommit]
+
+	let embeds = commits.map(c =>
 		generateEmbed(c, "TestUser", fakeRepo, avatar, "test-repo", fakeRepo, "main")
 	)
 
