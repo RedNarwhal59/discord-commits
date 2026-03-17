@@ -14172,18 +14172,9 @@ run();
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.generateText = exports.generateEmbed = exports.obfuscate = void 0;
-let blocks = ["▂", "▄", "▆", "█"];
+exports.generateEmbed = exports.obfuscate = void 0;
 function obfuscate(input) {
-    let output = String();
-    for (let char of input) {
-        if (char === " ") {
-            output += " ";
-            continue;
-        }
-        output += blocks[Math.floor(Math.random() * blocks.length)];
-    }
-    return output;
+    return "█".repeat(input.length);
 }
 exports.obfuscate = obfuscate;
 // Colors by commit type
@@ -14208,7 +14199,8 @@ function generateEmbed(commit, senderName, senderUrl, senderAvatar, repoName, re
     let shortId = commit.id.substring(0, 7);
     let message = commit.message;
     // Handle private/obfuscated commits
-    if (message.startsWith("!") || message.startsWith("$")) {
+    let isObfuscated = message.startsWith("!") || message.startsWith("$");
+    if (isObfuscated) {
         message = obfuscate(message.substring(1).trim());
     }
     // Split multi-line commit messages: first line is title, rest is extra detail
@@ -14222,22 +14214,23 @@ function generateEmbed(commit, senderName, senderUrl, senderAvatar, repoName, re
     // Metadata line: commit ID • repo/branch
     let branchUrl = `${repoUrl}/tree/${branch}`;
     let metaLine = `[\`${shortId}\`](${repoUrl}/commit/${commit.id}) • [${repoName}/${branch}](${branchUrl})`;
-    // Count files changed
-    let filesAdded = (_b = (_a = commit.added) === null || _a === void 0 ? void 0 : _a.length) !== null && _b !== void 0 ? _b : 0;
-    let filesModified = (_d = (_c = commit.modified) === null || _c === void 0 ? void 0 : _c.length) !== null && _d !== void 0 ? _d : 0;
-    let filesRemoved = (_f = (_e = commit.removed) === null || _e === void 0 ? void 0 : _e.length) !== null && _f !== void 0 ? _f : 0;
-    let totalFiles = filesAdded + filesModified + filesRemoved;
-    let fileSummary = [];
-    if (filesAdded > 0)
-        fileSummary.push(`${filesAdded} added`);
-    if (filesModified > 0)
-        fileSummary.push(`${filesModified} modified`);
-    if (filesRemoved > 0)
-        fileSummary.push(`${filesRemoved} removed`);
-    // Small text line: repo/branch • commit ID — file counts (all on one line)
+    // Small text line: commit ID • repo/branch — file counts (all on one line)
     let smallLine = `-# ${metaLine}`;
-    if (totalFiles > 0) {
-        smallLine += ` — ${fileSummary.join(", ")}`;
+    if (!isObfuscated) {
+        let filesAdded = (_b = (_a = commit.added) === null || _a === void 0 ? void 0 : _a.length) !== null && _b !== void 0 ? _b : 0;
+        let filesModified = (_d = (_c = commit.modified) === null || _c === void 0 ? void 0 : _c.length) !== null && _d !== void 0 ? _d : 0;
+        let filesRemoved = (_f = (_e = commit.removed) === null || _e === void 0 ? void 0 : _e.length) !== null && _f !== void 0 ? _f : 0;
+        let totalFiles = filesAdded + filesModified + filesRemoved;
+        let fileSummary = [];
+        if (filesAdded > 0)
+            fileSummary.push(`${filesAdded} added`);
+        if (filesModified > 0)
+            fileSummary.push(`${filesModified} modified`);
+        if (filesRemoved > 0)
+            fileSummary.push(`${filesRemoved} removed`);
+        if (totalFiles > 0) {
+            smallLine += ` — ${fileSummary.join(", ")}`;
+        }
     }
     description += `\n${smallLine}`;
     let embed = {
@@ -14253,21 +14246,22 @@ function generateEmbed(commit, senderName, senderUrl, senderAvatar, repoName, re
 }
 exports.generateEmbed = generateEmbed;
 // Legacy plain-text generator (kept for reference)
-function generateText(commit) {
-    let id = commit.id.substring(0, 8);
-    let repo = commit.url.split("/commit")[0];
-    let text = `[\`${id}\`](<${repo}/commit/${id}>) `;
-    let message = commit.message;
-    if (message.startsWith("!") || message.startsWith("$")) {
-        text += `${obfuscate(message.substring(1).trim())}`;
-    }
-    else {
-        text += `${message}`;
-    }
-    text += "\n";
-    return text;
-}
-exports.generateText = generateText;
+// export function generateText(commit: Commit): string {
+// 	let id = commit.id.substring(0, 8)
+// 	let repo = commit.url.split("/commit")[0]
+//
+// 	let text = `[\`${id}\`](<${repo}/commit/${id}>) `
+// 	let message = commit.message
+//
+// 	if (message.startsWith("!") || message.startsWith("$")) {
+// 		text += `${obfuscate(message.substring(1).trim())}`
+// 	} else {
+// 		text += `${message}`
+// 	}
+//
+// 	text += "\n"
+// 	return text
+// }
 
 
 /***/ }),

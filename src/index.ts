@@ -2,7 +2,7 @@ import { context } from "@actions/github"
 import * as core from "@actions/core"
 import fetch from "node-fetch"
 import { PushEvent } from "@octokit/webhooks-definitions/schema"
-import { generateEmbed, DiscordEmbed, obfuscate } from "./utils"
+import { generateEmbed, DiscordEmbed } from "./utils"
 
 let url = core.getInput("webhookUrl").replace("/github", "")
 let testMessage = core.getInput("testMessage")

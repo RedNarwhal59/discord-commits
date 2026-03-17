@@ -1,20 +1,7 @@
 import { Commit } from "@octokit/webhooks-definitions/schema"
 
-let blocks = ["▂", "▄", "▆", "█"]
-
 export function obfuscate(input: string): string {
-	let output = String()
-
-	for (let char of input) {
-		if (char === " ") {
-			output += " "
-			continue
-		}
-
-		output += blocks[Math.floor(Math.random() * blocks.length)]
-	}
-
-	return output
+	return "█".repeat(input.length)
 }
 
 export interface EmbedAuthor {
@@ -76,7 +63,8 @@ export function generateEmbed(
 	let message = commit.message
 
 	// Handle private/obfuscated commits
-	if (message.startsWith("!") || message.startsWith("$")) {
+	let isObfuscated = message.startsWith("!") || message.startsWith("$")
+	if (isObfuscated) {
 		message = obfuscate(message.substring(1).trim())
 	}
 
@@ -94,21 +82,22 @@ export function generateEmbed(
 	let branchUrl = `${repoUrl}/tree/${branch}`
 	let metaLine = `[\`${shortId}\`](${repoUrl}/commit/${commit.id}) • [${repoName}/${branch}](${branchUrl})`
 
-	// Count files changed
-	let filesAdded = commit.added?.length ?? 0
-	let filesModified = commit.modified?.length ?? 0
-	let filesRemoved = commit.removed?.length ?? 0
-	let totalFiles = filesAdded + filesModified + filesRemoved
-
-	let fileSummary = []
-	if (filesAdded > 0) fileSummary.push(`${filesAdded} added`)
-	if (filesModified > 0) fileSummary.push(`${filesModified} modified`)
-	if (filesRemoved > 0) fileSummary.push(`${filesRemoved} removed`)
-
-	// Small text line: repo/branch • commit ID — file counts (all on one line)
+	// Small text line: commit ID • repo/branch — file counts (all on one line)
 	let smallLine = `-# ${metaLine}`
-	if (totalFiles > 0) {
-		smallLine += ` — ${fileSummary.join(", ")}`
+	if (!isObfuscated) {
+		let filesAdded = commit.added?.length ?? 0
+		let filesModified = commit.modified?.length ?? 0
+		let filesRemoved = commit.removed?.length ?? 0
+		let totalFiles = filesAdded + filesModified + filesRemoved
+
+		let fileSummary = []
+		if (filesAdded > 0) fileSummary.push(`${filesAdded} added`)
+		if (filesModified > 0) fileSummary.push(`${filesModified} modified`)
+		if (filesRemoved > 0) fileSummary.push(`${filesRemoved} removed`)
+
+		if (totalFiles > 0) {
+			smallLine += ` — ${fileSummary.join(", ")}`
+		}
 	}
 	description += `\n${smallLine}`
 
@@ -126,19 +115,19 @@ export function generateEmbed(
 }
 
 // Legacy plain-text generator (kept for reference)
-export function generateText(commit: Commit): string {
-	let id = commit.id.substring(0, 8)
-	let repo = commit.url.split("/commit")[0]
-
-	let text = `[\`${id}\`](<${repo}/commit/${id}>) `
-	let message = commit.message
-
-	if (message.startsWith("!") || message.startsWith("$")) {
-		text += `${obfuscate(message.substring(1).trim())}`
-	} else {
-		text += `${message}`
-	}
-
-	text += "\n"
-	return text
-}
+// export function generateText(commit: Commit): string {
+// 	let id = commit.id.substring(0, 8)
+// 	let repo = commit.url.split("/commit")[0]
+//
+// 	let text = `[\`${id}\`](<${repo}/commit/${id}>) `
+// 	let message = commit.message
+//
+// 	if (message.startsWith("!") || message.startsWith("$")) {
+// 		text += `${obfuscate(message.substring(1).trim())}`
+// 	} else {
+// 		text += `${message}`
+// 	}
+//
+// 	text += "\n"
+// 	return text
+// }
