@@ -13854,185 +13854,6 @@ function wrappy (fn, cb) {
 
 /***/ }),
 
-/***/ 6144:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-const github_1 = __nccwpck_require__(5438);
-const core = __importStar(__nccwpck_require__(2186));
-const node_fetch_1 = __importDefault(__nccwpck_require__(4429));
-const utils_1 = __nccwpck_require__(1314);
-const url = core.getInput("webhookUrl").replace("/github", "");
-const testMessage = core.getInput("testMessage");
-const data = github_1.context.payload;
-const [sender, repo, branch, senderUrl, repoUrl] = [
-    (data.sender && data.sender.login) || "unknown",
-    (data.repository && data.repository.name) || "unknown",
-    github_1.context.ref.replace("refs/heads/", ""),
-    (data.sender && data.sender.html_url) || "",
-    (data.repository && data.repository.html_url) || ""
-];
-const branchUrl = `${repoUrl}/tree/${branch}`;
-const originalFooter = `[${repo}](<${repoUrl}>)/[${branch}](<${branchUrl}>)`;
-// const privateFooter = `${obfuscate(repo)}/${obfuscate(branch)}`
-let isPrivate = false;
-const footer = () => `- [${sender}](<${senderUrl}>) on ${originalFooter}`;
-// const footer = () =>
-// 	`- [${sender}](<${senderUrl}>) on ${
-// 		isPrivate ? privateFooter : originalFooter
-// 	}`
-let buffer = String();
-function send() {
-    return __awaiter(this, void 0, void 0, function* () {
-        const content = buffer + footer();
-        const res = yield (0, node_fetch_1.default)(url, {
-            method: "POST",
-            body: JSON.stringify({
-                username: sender,
-                avatar_url: data.sender && data.sender.avatar_url,
-                content: content,
-                allowed_mentions: { parse: [] }
-            }),
-            headers: { "Content-Type": "application/json" }
-        });
-        if (!res.ok)
-            core.setFailed(yield res.text());
-        buffer = String();
-    });
-}
-function sendTest() {
-    return __awaiter(this, void 0, void 0, function* () {
-        const fakeId = [...Array(40)].map(() => Math.floor(Math.random() * 16).toString(16)).join("");
-        const fakeRepo = "https://github.com/TestUser/test-repo";
-        const fakeCommit = {
-            id: fakeId,
-            url: `${fakeRepo}/commit/${fakeId}`,
-            message: testMessage
-        };
-        const text = (0, utils_1.generateText)(fakeCommit);
-        const fakeBranch = "main";
-        const fakeFooter = `- [TestUser](<${fakeRepo}>) on [test-repo](<${fakeRepo}>)/[${fakeBranch}](<${fakeRepo}/tree/${fakeBranch}>)`;
-        const content = text + fakeFooter;
-        const res = yield (0, node_fetch_1.default)(url, {
-            method: "POST",
-            body: JSON.stringify({
-                username: "TestUser",
-                content: content,
-                allowed_mentions: { parse: [] }
-            }),
-            headers: { "Content-Type": "application/json" }
-        });
-        if (!res.ok)
-            core.setFailed(yield res.text());
-    });
-}
-function run() {
-    return __awaiter(this, void 0, void 0, function* () {
-        if (testMessage) {
-            yield sendTest();
-            return;
-        }
-        if (github_1.context.eventName !== "push")
-            return;
-        for (const commit of data.commits) {
-            // const [text, _private] = generateText(commit)
-            const text = (0, utils_1.generateText)(commit);
-            // if (_private) isPrivate = true
-            const sendLength = text.length + buffer.length + footer().length;
-            if (sendLength >= 2000) {
-                yield send();
-                // isPrivate = false
-            }
-            buffer += text;
-        }
-        if (buffer.length > 0)
-            yield send();
-    });
-}
-run();
-
-
-/***/ }),
-
-/***/ 1314:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.generateText = exports.obfuscate = void 0;
-const blocks = ["▂", "▄", "▆", "█"];
-function obfuscate(input) {
-    let output = String();
-    for (const char of input) {
-        if (char === " ") {
-            output += " ";
-            continue;
-        }
-        output += blocks[Math.floor(Math.random() * blocks.length)];
-    }
-    return output;
-}
-exports.obfuscate = obfuscate;
-function generateText(commit) {
-    const id = commit.id.substring(0, 8);
-    const repo = commit.url.split("/commit")[0];
-    let text = `[\`${id}\`](<${repo}/commit/${id}>) `;
-    let message = commit.message;
-    // let isPrivate = false
-    if (message.startsWith("!") || message.startsWith("$")) {
-        // isPrivate = true
-        text += `${obfuscate(message.substring(1).trim())}`;
-    }
-    else {
-        text += `${message}`;
-    }
-    text += "\n";
-    // return [text, isPrivate]
-    return text;
-}
-exports.generateText = generateText;
-
-
-/***/ }),
-
 /***/ 2877:
 /***/ ((module) => {
 
@@ -14190,6 +14011,248 @@ module.exports = require("worker_threads");
 
 "use strict";
 module.exports = require("zlib");
+
+/***/ }),
+
+/***/ 3179:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const github_1 = __nccwpck_require__(5438);
+const core = __importStar(__nccwpck_require__(2186));
+const node_fetch_1 = __importDefault(__nccwpck_require__(4429));
+const utils_1 = __nccwpck_require__(8281);
+let url = core.getInput("webhookUrl").replace("/github", "");
+let testMessage = core.getInput("testMessage");
+function sendEmbeds(embeds, username, avatarUrl) {
+    return __awaiter(this, void 0, void 0, function* () {
+        let res = yield (0, node_fetch_1.default)(url, {
+            method: "POST",
+            body: JSON.stringify({
+                username: username,
+                avatar_url: avatarUrl,
+                embeds: embeds,
+                allowed_mentions: { parse: [] }
+            }),
+            headers: { "Content-Type": "application/json" }
+        });
+        if (!res.ok)
+            core.setFailed(yield res.text());
+    });
+}
+function fakeId() {
+    return [...Array(40)].map(() => Math.floor(Math.random() * 16).toString(16)).join("");
+}
+function sendTest() {
+    return __awaiter(this, void 0, void 0, function* () {
+        let fakeRepo = "https://github.com/TestUser/test-repo";
+        let avatar = "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png";
+        // Green — normal commit
+        let normalCommit = {
+            id: fakeId(),
+            url: `${fakeRepo}/commit/${fakeId()}`,
+            message: testMessage,
+            added: ["src/new-file.ts"],
+            modified: ["src/index.ts", "README.md"],
+            removed: []
+        };
+        // Yellow — merge commit
+        let mergeCommit = {
+            id: fakeId(),
+            url: `${fakeRepo}/commit/${fakeId()}`,
+            message: "Merge branch 'feature/new-weapons' into main",
+            added: ["lua/weapons/cw_ak74.lua"],
+            modified: ["lua/autorun/init.lua"],
+            removed: []
+        };
+        // Red — delete-only commit
+        let deleteCommit = {
+            id: fakeId(),
+            url: `${fakeRepo}/commit/${fakeId()}`,
+            message: "Remove deprecated ARC9 weapon files",
+            added: [],
+            modified: [],
+            removed: ["lua/weapons/arc9_ak47.lua", "lua/weapons/arc9_m4a1.lua", "lua/weapons/arc9_mp5.lua"]
+        };
+        let embeds = [normalCommit, mergeCommit, deleteCommit].map(c => (0, utils_1.generateEmbed)(c, "TestUser", fakeRepo, avatar, "test-repo", fakeRepo, "main"));
+        yield sendEmbeds(embeds, "TestUser");
+    });
+}
+let data = github_1.context.payload;
+let [sender, repo, branch, senderUrl, senderAvatar, repoUrl] = [
+    (_b = (_a = data.sender) === null || _a === void 0 ? void 0 : _a.login) !== null && _b !== void 0 ? _b : "unknown",
+    (_d = (_c = data.repository) === null || _c === void 0 ? void 0 : _c.name) !== null && _d !== void 0 ? _d : "unknown",
+    github_1.context.ref.replace("refs/heads/", ""),
+    (_f = (_e = data.sender) === null || _e === void 0 ? void 0 : _e.html_url) !== null && _f !== void 0 ? _f : "",
+    (_h = (_g = data.sender) === null || _g === void 0 ? void 0 : _g.avatar_url) !== null && _h !== void 0 ? _h : "",
+    (_k = (_j = data.repository) === null || _j === void 0 ? void 0 : _j.html_url) !== null && _k !== void 0 ? _k : ""
+];
+// Discord allows max 10 embeds per message
+const MAX_EMBEDS_PER_MESSAGE = 10;
+function run() {
+    var _a, _b;
+    return __awaiter(this, void 0, void 0, function* () {
+        if (testMessage) {
+            yield sendTest();
+            return;
+        }
+        if (github_1.context.eventName !== "push")
+            return;
+        let embeds = [];
+        for (let commit of data.commits) {
+            embeds.push((0, utils_1.generateEmbed)(commit, sender, senderUrl, senderAvatar, repo, repoUrl, branch));
+            // Send in batches of 10 (Discord's limit)
+            if (embeds.length >= MAX_EMBEDS_PER_MESSAGE) {
+                yield sendEmbeds(embeds, sender, (_a = data.sender) === null || _a === void 0 ? void 0 : _a.avatar_url);
+                embeds = [];
+            }
+        }
+        // Send remaining embeds
+        if (embeds.length > 0) {
+            yield sendEmbeds(embeds, sender, (_b = data.sender) === null || _b === void 0 ? void 0 : _b.avatar_url);
+        }
+    });
+}
+run();
+
+
+/***/ }),
+
+/***/ 8281:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.generateText = exports.generateEmbed = exports.obfuscate = void 0;
+let blocks = ["▂", "▄", "▆", "█"];
+function obfuscate(input) {
+    let output = String();
+    for (let char of input) {
+        if (char === " ") {
+            output += " ";
+            continue;
+        }
+        output += blocks[Math.floor(Math.random() * blocks.length)];
+    }
+    return output;
+}
+exports.obfuscate = obfuscate;
+// Colors by commit type
+const COLOR_DEFAULT = 0x57F287; // Green — normal commits
+const COLOR_DELETE = 0xED4245; // Red — delete-only commits
+const COLOR_MERGE = 0xFEE75C; // Yellow — merge commits
+function getCommitColor(commit) {
+    var _a, _b, _c, _d, _e, _f;
+    // Merge commits typically start with "Merge"
+    if (commit.message.startsWith("Merge"))
+        return COLOR_MERGE;
+    // Delete-only: files were removed but nothing added or modified
+    let hasAdded = ((_b = (_a = commit.added) === null || _a === void 0 ? void 0 : _a.length) !== null && _b !== void 0 ? _b : 0) > 0;
+    let hasModified = ((_d = (_c = commit.modified) === null || _c === void 0 ? void 0 : _c.length) !== null && _d !== void 0 ? _d : 0) > 0;
+    let hasRemoved = ((_f = (_e = commit.removed) === null || _e === void 0 ? void 0 : _e.length) !== null && _f !== void 0 ? _f : 0) > 0;
+    if (hasRemoved && !hasAdded && !hasModified)
+        return COLOR_DELETE;
+    return COLOR_DEFAULT;
+}
+function generateEmbed(commit, senderName, senderUrl, senderAvatar, repoName, repoUrl, branch) {
+    var _a, _b, _c, _d, _e, _f;
+    let shortId = commit.id.substring(0, 7);
+    let message = commit.message;
+    // Handle private/obfuscated commits
+    if (message.startsWith("!") || message.startsWith("$")) {
+        message = obfuscate(message.substring(1).trim());
+    }
+    // Split multi-line commit messages: first line is title, rest is extra detail
+    let lines = message.split("\n");
+    let title = lines[0];
+    let extraLines = lines.slice(1).join("\n").trim();
+    let description = `[\`${shortId}\`](${repoUrl}/commit/${commit.id}) ${title}`;
+    if (extraLines) {
+        description += `\n\n${extraLines}`;
+    }
+    // Count files changed
+    let filesAdded = (_b = (_a = commit.added) === null || _a === void 0 ? void 0 : _a.length) !== null && _b !== void 0 ? _b : 0;
+    let filesModified = (_d = (_c = commit.modified) === null || _c === void 0 ? void 0 : _c.length) !== null && _d !== void 0 ? _d : 0;
+    let filesRemoved = (_f = (_e = commit.removed) === null || _e === void 0 ? void 0 : _e.length) !== null && _f !== void 0 ? _f : 0;
+    let totalFiles = filesAdded + filesModified + filesRemoved;
+    let fileSummary = [];
+    if (filesAdded > 0)
+        fileSummary.push(`${filesAdded} added`);
+    if (filesModified > 0)
+        fileSummary.push(`${filesModified} modified`);
+    if (filesRemoved > 0)
+        fileSummary.push(`${filesRemoved} removed`);
+    let embed = {
+        color: getCommitColor(commit),
+        author: {
+            name: senderName,
+            url: senderUrl,
+            icon_url: senderAvatar
+        },
+        description: description,
+        footer: {
+            text: `${repoName}/${branch}` + (totalFiles > 0 ? `  •  ${fileSummary.join(", ")}` : "")
+        }
+    };
+    return embed;
+}
+exports.generateEmbed = generateEmbed;
+// Legacy plain-text generator (kept for reference)
+function generateText(commit) {
+    let id = commit.id.substring(0, 8);
+    let repo = commit.url.split("/commit")[0];
+    let text = `[\`${id}\`](<${repo}/commit/${id}>) `;
+    let message = commit.message;
+    if (message.startsWith("!") || message.startsWith("$")) {
+        text += `${obfuscate(message.substring(1).trim())}`;
+    }
+    else {
+        text += `${message}`;
+    }
+    text += "\n";
+    return text;
+}
+exports.generateText = generateText;
+
 
 /***/ }),
 
@@ -17085,7 +17148,7 @@ module.exports = JSON.parse('[[[0,44],"disallowed_STD3_valid"],[[45,46],"valid"]
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
 /******/ 	// This entry module is referenced by other modules so it can't be inlined
-/******/ 	var __webpack_exports__ = __nccwpck_require__(6144);
+/******/ 	var __webpack_exports__ = __nccwpck_require__(3179);
 /******/ 	module.exports = __webpack_exports__;
 /******/ 	
 /******/ })()

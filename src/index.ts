@@ -2,73 +2,84 @@ import { context } from "@actions/github"
 import * as core from "@actions/core"
 import fetch from "node-fetch"
 import { PushEvent } from "@octokit/webhooks-definitions/schema"
-import { generateText, obfuscate } from "./utils"
+import { generateEmbed, DiscordEmbed, obfuscate } from "./utils"
 
 let url = core.getInput("webhookUrl").replace("/github", "")
 let testMessage = core.getInput("testMessage")
 
-async function sendTest(): Promise<void> {
-	let fakeId = [...Array(40)].map(() => Math.floor(Math.random() * 16).toString(16)).join("")
-	let fakeRepo = "https://github.com/TestUser/test-repo"
-	let fakeCommit = {
-		id: fakeId,
-		url: `${fakeRepo}/commit/${fakeId}`,
-		message: testMessage
-	} as any
-
-	let text = generateText(fakeCommit)
-	let fakeBranch = "main"
-	let fakeFooter = `- [TestUser](<${fakeRepo}>) on [test-repo](<${fakeRepo}>)/[${fakeBranch}](<${fakeRepo}/tree/${fakeBranch}>)`
-	let content = text + fakeFooter
-
+async function sendEmbeds(embeds: DiscordEmbed[], username: string, avatarUrl?: string): Promise<void> {
 	let res = await fetch(url, {
 		method: "POST",
 		body: JSON.stringify({
-			username: "TestUser",
-			content: content,
+			username: username,
+			avatar_url: avatarUrl,
+			embeds: embeds,
 			allowed_mentions: { parse: [] }
 		}),
 		headers: { "Content-Type": "application/json" }
 	})
 
 	if (!res.ok) core.setFailed(await res.text())
+}
+
+function fakeId(): string {
+	return [...Array(40)].map(() => Math.floor(Math.random() * 16).toString(16)).join("")
+}
+
+async function sendTest(): Promise<void> {
+	let fakeRepo = "https://github.com/TestUser/test-repo"
+	let avatar = "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
+
+	// Green — normal commit
+	let normalCommit = {
+		id: fakeId(),
+		url: `${fakeRepo}/commit/${fakeId()}`,
+		message: testMessage,
+		added: ["src/new-file.ts"],
+		modified: ["src/index.ts", "README.md"],
+		removed: []
+	} as any
+
+	// Yellow — merge commit
+	let mergeCommit = {
+		id: fakeId(),
+		url: `${fakeRepo}/commit/${fakeId()}`,
+		message: "Merge branch 'feature/new-weapons' into main",
+		added: ["lua/weapons/cw_ak74.lua"],
+		modified: ["lua/autorun/init.lua"],
+		removed: []
+	} as any
+
+	// Red — delete-only commit
+	let deleteCommit = {
+		id: fakeId(),
+		url: `${fakeRepo}/commit/${fakeId()}`,
+		message: "Remove deprecated ARC9 weapon files",
+		added: [],
+		modified: [],
+		removed: ["lua/weapons/arc9_ak47.lua", "lua/weapons/arc9_m4a1.lua", "lua/weapons/arc9_mp5.lua"]
+	} as any
+
+	let embeds = [normalCommit, mergeCommit, deleteCommit].map(c =>
+		generateEmbed(c, "TestUser", fakeRepo, avatar, "test-repo", fakeRepo, "main")
+	)
+
+	await sendEmbeds(embeds, "TestUser")
 }
 
 let data = context.payload as PushEvent
 
-let [sender, repo, branch, senderUrl, repoUrl] = [
+let [sender, repo, branch, senderUrl, senderAvatar, repoUrl] = [
 	data.sender?.login ?? "unknown",
 	data.repository?.name ?? "unknown",
 	context.ref.replace("refs/heads/", ""),
 	data.sender?.html_url ?? "",
+	data.sender?.avatar_url ?? "",
 	data.repository?.html_url ?? ""
 ]
 
-let branchUrl = `${repoUrl}/tree/${branch}`
-let originalFooter = `[${repo}](<${repoUrl}>)/[${branch}](<${branchUrl}>)`
-
-let isPrivate = false
-let footer = `- [${sender}](<${senderUrl}>) on ${originalFooter}`
-
-let buffer = String()
-
-async function send(): Promise<void> {
-	let content = buffer + footer
-	let res = await fetch(url, {
-		method: "POST",
-		body: JSON.stringify({
-			username: sender,
-			avatar_url: data.sender?.avatar_url,
-			content: content,
-			allowed_mentions: { parse: [] }
-		}),
-		headers: { "Content-Type": "application/json" }
-	})
-
-	if (!res.ok) core.setFailed(await res.text())
-
-	buffer = String()
-}
+// Discord allows max 10 embeds per message
+const MAX_EMBEDS_PER_MESSAGE = 10
 
 async function run(): Promise<void> {
 	if (testMessage) {
@@ -78,18 +89,22 @@ async function run(): Promise<void> {
 
 	if (context.eventName !== "push") return
 
+	let embeds: DiscordEmbed[] = []
+
 	for (let commit of data.commits) {
-		let text = generateText(commit)
-		let sendLength = text.length + buffer.length + footer.length
+		embeds.push(generateEmbed(commit, sender, senderUrl, senderAvatar, repo, repoUrl, branch))
 
-		if (sendLength >= 2000) {
-			await send()
+		// Send in batches of 10 (Discord's limit)
+		if (embeds.length >= MAX_EMBEDS_PER_MESSAGE) {
+			await sendEmbeds(embeds, sender, data.sender?.avatar_url)
+			embeds = []
 		}
-
-		buffer += text
 	}
 
-	if (buffer.length > 0) await send()
+	// Send remaining embeds
+	if (embeds.length > 0) {
+		await sendEmbeds(embeds, sender, data.sender?.avatar_url)
+	}
 }
 
 run()
