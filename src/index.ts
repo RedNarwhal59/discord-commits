@@ -99,7 +99,15 @@ async function run(): Promise<void> {
 	let embeds: DiscordEmbed[] = []
 
 	for (let commit of data.commits) {
-		embeds.push(generateEmbed(commit, sender, senderUrl, senderAvatar, repo, repoUrl, branch))
+		let authorName = commit.author?.username ?? sender
+		let authorUrl = commit.author?.username
+			? `https://github.com/${commit.author.username}`
+			: senderUrl
+		let authorAvatar = commit.author?.username
+			? `https://github.com/${commit.author.username}.png`
+			: senderAvatar
+
+		embeds.push(generateEmbed(commit, authorName, authorUrl, authorAvatar, repo, repoUrl, branch))
 
 		// Send in batches of 10 (Discord's limit)
 		if (embeds.length >= MAX_EMBEDS_PER_MESSAGE) {
