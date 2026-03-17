@@ -85,10 +85,14 @@ export function generateEmbed(
 	let title = lines[0]
 	let extraLines = lines.slice(1).join("\n").trim()
 
-	let description = `[\`${shortId}\`](${repoUrl}/commit/${commit.id}) ${title}`
+	let description = title
 	if (extraLines) {
 		description += `\n\n${extraLines}`
 	}
+
+	// Metadata line: repo/branch • commit ID
+	let branchUrl = `${repoUrl}/tree/${branch}`
+	let metaLine = `[${repoName}/${branch}](${branchUrl}) • [\`${shortId}\`](${repoUrl}/commit/${commit.id})`
 
 	// Count files changed
 	let filesAdded = commit.added?.length ?? 0
@@ -101,6 +105,11 @@ export function generateEmbed(
 	if (filesModified > 0) fileSummary.push(`${filesModified} modified`)
 	if (filesRemoved > 0) fileSummary.push(`${filesRemoved} removed`)
 
+	description += `\n\n${metaLine}`
+	if (totalFiles > 0) {
+		description += `\n${fileSummary.join(", ")}`
+	}
+
 	let embed: DiscordEmbed = {
 		color: getCommitColor(commit),
 		author: {
@@ -108,10 +117,7 @@ export function generateEmbed(
 			url: senderUrl,
 			icon_url: senderAvatar
 		},
-		description: description,
-		footer: {
-			text: `${repoName}/${branch}` + (totalFiles > 0 ? `  •  ${fileSummary.join(", ")}` : "")
-		}
+		description: description
 	}
 
 	return embed

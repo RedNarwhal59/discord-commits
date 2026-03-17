@@ -14205,10 +14205,13 @@ function generateEmbed(commit, senderName, senderUrl, senderAvatar, repoName, re
     let lines = message.split("\n");
     let title = lines[0];
     let extraLines = lines.slice(1).join("\n").trim();
-    let description = `[\`${shortId}\`](${repoUrl}/commit/${commit.id}) ${title}`;
+    let description = title;
     if (extraLines) {
         description += `\n\n${extraLines}`;
     }
+    // Metadata line: repo/branch • commit ID
+    let branchUrl = `${repoUrl}/tree/${branch}`;
+    let metaLine = `[${repoName}/${branch}](${branchUrl}) • [\`${shortId}\`](${repoUrl}/commit/${commit.id})`;
     // Count files changed
     let filesAdded = (_b = (_a = commit.added) === null || _a === void 0 ? void 0 : _a.length) !== null && _b !== void 0 ? _b : 0;
     let filesModified = (_d = (_c = commit.modified) === null || _c === void 0 ? void 0 : _c.length) !== null && _d !== void 0 ? _d : 0;
@@ -14221,6 +14224,10 @@ function generateEmbed(commit, senderName, senderUrl, senderAvatar, repoName, re
         fileSummary.push(`${filesModified} modified`);
     if (filesRemoved > 0)
         fileSummary.push(`${filesRemoved} removed`);
+    description += `\n\n${metaLine}`;
+    if (totalFiles > 0) {
+        description += `\n${fileSummary.join(", ")}`;
+    }
     let embed = {
         color: getCommitColor(commit),
         author: {
@@ -14228,10 +14235,7 @@ function generateEmbed(commit, senderName, senderUrl, senderAvatar, repoName, re
             url: senderUrl,
             icon_url: senderAvatar
         },
-        description: description,
-        footer: {
-            text: `${repoName}/${branch}` + (totalFiles > 0 ? `  •  ${fileSummary.join(", ")}` : "")
-        }
+        description: description
     };
     return embed;
 }
