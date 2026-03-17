@@ -14086,7 +14086,7 @@ function sendTest() {
     return __awaiter(this, void 0, void 0, function* () {
         let fakeRepo = "https://github.com/TestUser/test-repo";
         let avatar = "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png";
-        // Green — normal commit
+        // Green - normal commit
         let normalCommit = {
             id: fakeId(),
             url: `${fakeRepo}/commit/${fakeId()}`,
@@ -14095,7 +14095,7 @@ function sendTest() {
             modified: ["src/index.ts", "README.md"],
             removed: []
         };
-        // Yellow — merge commit
+        // Yellow - merge commit
         let mergeCommit = {
             id: fakeId(),
             url: `${fakeRepo}/commit/${fakeId()}`,
@@ -14104,7 +14104,7 @@ function sendTest() {
             modified: ["lua/autorun/init.lua"],
             removed: []
         };
-        // Red — delete-only commit
+        // Red - delete-only commit
         let deleteCommit = {
             id: fakeId(),
             url: `${fakeRepo}/commit/${fakeId()}`,
@@ -14137,8 +14137,53 @@ let [sender, repo, branch, senderUrl, senderAvatar, repoUrl] = [
 ];
 // Discord allows max 10 embeds per message
 const MAX_EMBEDS_PER_MESSAGE = 10;
+// Fetch file changes from GitHub API when the push payload doesn't include them
+function fetchCommitFiles(sha) {
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j;
+    return __awaiter(this, void 0, void 0, function* () {
+        let owner = (_f = (_c = (_b = (_a = data.repository) === null || _a === void 0 ? void 0 : _a.owner) === null || _b === void 0 ? void 0 : _b.login) !== null && _c !== void 0 ? _c : (_e = (_d = data.repository) === null || _d === void 0 ? void 0 : _d.owner) === null || _e === void 0 ? void 0 : _e.name) !== null && _f !== void 0 ? _f : "";
+        let repoName = (_h = (_g = data.repository) === null || _g === void 0 ? void 0 : _g.name) !== null && _h !== void 0 ? _h : "";
+        let token = process.env.GITHUB_TOKEN || "";
+        if (!owner || !repoName || !token) {
+            return { added: [], modified: [], removed: [] };
+        }
+        try {
+            let res = yield (0, node_fetch_1.default)(`https://api.github.com/repos/${owner}/${repoName}/commits/${sha}`, {
+                headers: {
+                    "Authorization": `Bearer ${token}`,
+                    "Accept": "application/vnd.github.v3+json",
+                    "User-Agent": "discord-commits-action"
+                }
+            });
+            if (!res.ok)
+                return { added: [], modified: [], removed: [] };
+            let commit = yield res.json();
+            let added = [];
+            let modified = [];
+            let removed = [];
+            for (let file of ((_j = commit.files) !== null && _j !== void 0 ? _j : [])) {
+                if (file.status === "added")
+                    added.push(file.filename);
+                else if (file.status === "modified")
+                    modified.push(file.filename);
+                else if (file.status === "removed")
+                    removed.push(file.filename);
+                else if (file.status === "renamed")
+                    modified.push(file.filename);
+            }
+            return { added, modified, removed };
+        }
+        catch (_k) {
+            return { added: [], modified: [], removed: [] };
+        }
+    });
+}
+function hasFileData(commit) {
+    var _a, _b, _c;
+    return (((_a = commit.added) === null || _a === void 0 ? void 0 : _a.length) > 0) || (((_b = commit.modified) === null || _b === void 0 ? void 0 : _b.length) > 0) || (((_c = commit.removed) === null || _c === void 0 ? void 0 : _c.length) > 0);
+}
 function run() {
-    var _a, _b, _c, _d, _e, _f, _g;
+    var _a, _b, _c, _d, _e, _f;
     return __awaiter(this, void 0, void 0, function* () {
         if (testMessage) {
             yield sendTest();
@@ -14148,24 +14193,30 @@ function run() {
             return;
         let embeds = [];
         for (let commit of data.commits) {
-            console.log("COMMIT DATA:", JSON.stringify({ id: (_a = commit.id) === null || _a === void 0 ? void 0 : _a.substring(0, 7), added: commit.added, modified: commit.modified, removed: commit.removed }));
-            let authorName = (_c = (_b = commit.author) === null || _b === void 0 ? void 0 : _b.username) !== null && _c !== void 0 ? _c : sender;
-            let authorUrl = ((_d = commit.author) === null || _d === void 0 ? void 0 : _d.username)
+            // If the push payload doesn't include file data, fetch it from the API
+            if (!hasFileData(commit)) {
+                let files = yield fetchCommitFiles(commit.id);
+                commit.added = files.added;
+                commit.modified = files.modified;
+                commit.removed = files.removed;
+            }
+            let authorName = (_b = (_a = commit.author) === null || _a === void 0 ? void 0 : _a.username) !== null && _b !== void 0 ? _b : sender;
+            let authorUrl = ((_c = commit.author) === null || _c === void 0 ? void 0 : _c.username)
                 ? `https://github.com/${commit.author.username}`
                 : senderUrl;
-            let authorAvatar = ((_e = commit.author) === null || _e === void 0 ? void 0 : _e.username)
+            let authorAvatar = ((_d = commit.author) === null || _d === void 0 ? void 0 : _d.username)
                 ? `https://github.com/${commit.author.username}.png`
                 : senderAvatar;
             embeds.push((0, utils_1.generateEmbed)(commit, authorName, authorUrl, authorAvatar, repo, repoUrl, branch));
             // Send in batches of 10 (Discord's limit)
             if (embeds.length >= MAX_EMBEDS_PER_MESSAGE) {
-                yield sendEmbeds(embeds, sender, (_f = data.sender) === null || _f === void 0 ? void 0 : _f.avatar_url);
+                yield sendEmbeds(embeds, sender, (_e = data.sender) === null || _e === void 0 ? void 0 : _e.avatar_url);
                 embeds = [];
             }
         }
         // Send remaining embeds
         if (embeds.length > 0) {
-            yield sendEmbeds(embeds, sender, (_g = data.sender) === null || _g === void 0 ? void 0 : _g.avatar_url);
+            yield sendEmbeds(embeds, sender, (_f = data.sender) === null || _f === void 0 ? void 0 : _f.avatar_url);
         }
     });
 }

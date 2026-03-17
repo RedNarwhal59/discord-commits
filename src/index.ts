@@ -31,7 +31,7 @@ async function sendTest(): Promise<void> {
 	let fakeRepo = "https://github.com/TestUser/test-repo"
 	let avatar = "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
 
-	// Green — normal commit
+	// Green - normal commit
 	let normalCommit = {
 		id: fakeId(),
 		url: `${fakeRepo}/commit/${fakeId()}`,
@@ -41,7 +41,7 @@ async function sendTest(): Promise<void> {
 		removed: []
 	} as any
 
-	// Yellow — merge commit
+	// Yellow - merge commit
 	let mergeCommit = {
 		id: fakeId(),
 		url: `${fakeRepo}/commit/${fakeId()}`,
@@ -51,7 +51,7 @@ async function sendTest(): Promise<void> {
 		removed: []
 	} as any
 
-	// Red — delete-only commit
+	// Red - delete-only commit
 	let deleteCommit = {
 		id: fakeId(),
 		url: `${fakeRepo}/commit/${fakeId()}`,
@@ -88,6 +88,49 @@ let [sender, repo, branch, senderUrl, senderAvatar, repoUrl] = [
 // Discord allows max 10 embeds per message
 const MAX_EMBEDS_PER_MESSAGE = 10
 
+// Fetch file changes from GitHub API when the push payload doesn't include them
+async function fetchCommitFiles(sha: string): Promise<{ added: string[], modified: string[], removed: string[] }> {
+	let owner = data.repository?.owner?.login ?? data.repository?.owner?.name ?? ""
+	let repoName = data.repository?.name ?? ""
+	let token = process.env.GITHUB_TOKEN || ""
+
+	if (!owner || !repoName || !token) {
+		return { added: [], modified: [], removed: [] }
+	}
+
+	try {
+		let res = await fetch(`https://api.github.com/repos/${owner}/${repoName}/commits/${sha}`, {
+			headers: {
+				"Authorization": `Bearer ${token}`,
+				"Accept": "application/vnd.github.v3+json",
+				"User-Agent": "discord-commits-action"
+			}
+		})
+
+		if (!res.ok) return { added: [], modified: [], removed: [] }
+
+		let commit = await res.json() as any
+		let added: string[] = []
+		let modified: string[] = []
+		let removed: string[] = []
+
+		for (let file of (commit.files ?? [])) {
+			if (file.status === "added") added.push(file.filename)
+			else if (file.status === "modified") modified.push(file.filename)
+			else if (file.status === "removed") removed.push(file.filename)
+			else if (file.status === "renamed") modified.push(file.filename)
+		}
+
+		return { added, modified, removed }
+	} catch {
+		return { added: [], modified: [], removed: [] }
+	}
+}
+
+function hasFileData(commit: any): boolean {
+	return (commit.added?.length > 0) || (commit.modified?.length > 0) || (commit.removed?.length > 0)
+}
+
 async function run(): Promise<void> {
 	if (testMessage) {
 		await sendTest()
@@ -99,6 +142,14 @@ async function run(): Promise<void> {
 	let embeds: DiscordEmbed[] = []
 
 	for (let commit of data.commits) {
+		// If the push payload doesn't include file data, fetch it from the API
+		if (!hasFileData(commit)) {
+			let files = await fetchCommitFiles(commit.id)
+			;(commit as any).added = files.added
+			;(commit as any).modified = files.modified
+			;(commit as any).removed = files.removed
+		}
+
 		let authorName = commit.author?.username ?? sender
 		let authorUrl = commit.author?.username
 			? `https://github.com/${commit.author.username}`
