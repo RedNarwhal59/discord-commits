@@ -14219,9 +14219,9 @@ function generateEmbed(commit, senderName, senderUrl, senderAvatar, repoName, re
     if (extraLines) {
         description += `\n\n${extraLines}`;
     }
-    // Metadata line: repo/branch • commit ID
+    // Metadata line: commit ID • repo/branch
     let branchUrl = `${repoUrl}/tree/${branch}`;
-    let metaLine = `[${repoName}/${branch}](${branchUrl}) • [\`${shortId}\`](${repoUrl}/commit/${commit.id})`;
+    let metaLine = `[\`${shortId}\`](${repoUrl}/commit/${commit.id}) • [${repoName}/${branch}](${branchUrl})`;
     // Count files changed
     let filesAdded = (_b = (_a = commit.added) === null || _a === void 0 ? void 0 : _a.length) !== null && _b !== void 0 ? _b : 0;
     let filesModified = (_d = (_c = commit.modified) === null || _c === void 0 ? void 0 : _c.length) !== null && _d !== void 0 ? _d : 0;
@@ -14234,10 +14234,12 @@ function generateEmbed(commit, senderName, senderUrl, senderAvatar, repoName, re
         fileSummary.push(`${filesModified} modified`);
     if (filesRemoved > 0)
         fileSummary.push(`${filesRemoved} removed`);
-    description += `\n\n${metaLine}`;
+    // Small text line: repo/branch • commit ID — file counts (all on one line)
+    let smallLine = `-# ${metaLine}`;
     if (totalFiles > 0) {
-        description += `\n${fileSummary.join(", ")}`;
+        smallLine += ` — ${fileSummary.join(", ")}`;
     }
+    description += `\n${smallLine}`;
     let embed = {
         color: getCommitColor(commit),
         author: {
