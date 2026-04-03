@@ -13957,6 +13957,20 @@ function sendTest() {
             modified: [],
             removed: ["lua/weapons/arc9_ak47.lua", "lua/weapons/arc9_m4a1.lua", "lua/weapons/arc9_mp5.lua"]
         };
+        // Staff-only commit (!! prefix, sent to staff webhook)
+        let staffCommit = {
+            id: fakeId(),
+            url: `${fakeRepo}/commit/${fakeId()}`,
+            message: `!!${testMessage}`,
+            added: ["lua/config/staff_settings.lua"],
+            modified: ["lua/autorun/init.lua"],
+            removed: []
+        };
+        if (testType === "staff") {
+            let embeds = [(0, utils_1.generateEmbed)(staffCommit, "TestUser", fakeRepo, avatar, "test-repo", fakeRepo, "main")];
+            yield sendEmbeds(embeds, "TestUser", undefined, staffUrl);
+            return;
+        }
         let commits = [];
         if (testType === "normal")
             commits = [normalCommit];

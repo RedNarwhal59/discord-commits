@@ -65,6 +65,22 @@ async function sendTest(): Promise<void> {
 		removed: ["lua/weapons/arc9_ak47.lua", "lua/weapons/arc9_m4a1.lua", "lua/weapons/arc9_mp5.lua"]
 	} as any
 
+	// Staff-only commit (!! prefix, sent to staff webhook)
+	let staffCommit = {
+		id: fakeId(),
+		url: `${fakeRepo}/commit/${fakeId()}`,
+		message: `!!${testMessage}`,
+		added: ["lua/config/staff_settings.lua"],
+		modified: ["lua/autorun/init.lua"],
+		removed: []
+	} as any
+
+	if (testType === "staff") {
+		let embeds = [generateEmbed(staffCommit, "TestUser", fakeRepo, avatar, "test-repo", fakeRepo, "main")]
+		await sendEmbeds(embeds, "TestUser", undefined, staffUrl)
+		return
+	}
+
 	let commits: any[] = []
 	if (testType === "normal") commits = [normalCommit]
 	else if (testType === "merge") commits = [mergeCommit]
