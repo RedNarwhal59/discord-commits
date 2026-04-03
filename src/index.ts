@@ -5,11 +5,15 @@ import { PushEvent } from "@octokit/webhooks-definitions/schema"
 import { generateEmbed, DiscordEmbed } from "./utils"
 
 let url = core.getInput("webhookUrl").replace("/github", "")
+let staffUrl = core.getInput("staffWebhookUrl").replace("/github", "")
 let testMessage = core.getInput("testMessage")
 let testType = core.getInput("testType") || "all"
 
-async function sendEmbeds(embeds: DiscordEmbed[], username: string, avatarUrl?: string): Promise<void> {
-	let res = await fetch(url, {
+async function sendEmbeds(embeds: DiscordEmbed[], username: string, avatarUrl?: string, targetUrl?: string): Promise<void> {
+	let dest = targetUrl || url
+	if (!dest) return
+
+	let res = await fetch(dest, {
 		method: "POST",
 		body: JSON.stringify({
 			username: username,
@@ -20,7 +24,7 @@ async function sendEmbeds(embeds: DiscordEmbed[], username: string, avatarUrl?: 
 		headers: { "Content-Type": "application/json" }
 	})
 
-	if (!res.ok) core.setFailed(await res.text())
+	if (!res.ok) core.warning(`Discord webhook failed: ${await res.text()}`)
 }
 
 function fakeId(): string {
@@ -140,6 +144,7 @@ async function run(): Promise<void> {
 	if (context.eventName !== "push") return
 
 	let embeds: DiscordEmbed[] = []
+	let staffEmbeds: DiscordEmbed[] = []
 
 	for (let commit of data.commits) {
 		// If the push payload doesn't include file data, fetch it from the API
@@ -158,18 +163,31 @@ async function run(): Promise<void> {
 			? `https://github.com/${commit.author.username}.png`
 			: senderAvatar
 
-		embeds.push(generateEmbed(commit, authorName, authorUrl, authorAvatar, repo, repoUrl, branch))
+		let embed = generateEmbed(commit, authorName, authorUrl, authorAvatar, repo, repoUrl, branch)
+		let isStaffOnly = commit.message.startsWith("!!") && staffUrl
 
-		// Send in batches of 10 (Discord's limit)
-		if (embeds.length >= MAX_EMBEDS_PER_MESSAGE) {
-			await sendEmbeds(embeds, sender, data.sender?.avatar_url)
-			embeds = []
+		if (isStaffOnly) {
+			staffEmbeds.push(embed)
+
+			if (staffEmbeds.length >= MAX_EMBEDS_PER_MESSAGE) {
+				await sendEmbeds(staffEmbeds, sender, data.sender?.avatar_url, staffUrl)
+				staffEmbeds = []
+			}
+		} else {
+			embeds.push(embed)
+
+			if (embeds.length >= MAX_EMBEDS_PER_MESSAGE) {
+				await sendEmbeds(embeds, sender, data.sender?.avatar_url)
+				embeds = []
+			}
 		}
 	}
 
-	// Send remaining embeds
 	if (embeds.length > 0) {
 		await sendEmbeds(embeds, sender, data.sender?.avatar_url)
+	}
+	if (staffEmbeds.length > 0) {
+		await sendEmbeds(staffEmbeds, sender, data.sender?.avatar_url, staffUrl)
 	}
 }
 

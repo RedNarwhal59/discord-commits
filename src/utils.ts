@@ -62,8 +62,14 @@ export function generateEmbed(
 	let shortId = commit.id.substring(0, 7)
 	let message = commit.message
 
+	// Handle staff-only commits (!! prefix stripped before display, not obfuscated)
+	let isStaffOnly = message.startsWith("!!")
+	if (isStaffOnly) {
+		message = message.substring(2).trim()
+	}
+
 	// Handle private/obfuscated commits
-	let isObfuscated = message.startsWith("!") || message.startsWith("$")
+	let isObfuscated = !isStaffOnly && (message.startsWith("!") || message.startsWith("$"))
 	if (isObfuscated) {
 		message = obfuscate(message.substring(1).trim())
 	}

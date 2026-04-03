@@ -6,6 +6,9 @@ inputs:
   webhookUrl:
     description: Discord webhook URL. Should be stored in a secret and inserted as a context expression.
     required: true
+  staffWebhookUrl:
+    description: Discord webhook URL for staff-only channel. Commits prefixed with !! are sent here instead.
+    required: false
   testMessage:
     description: Optional test message to send via workflow_dispatch instead of real commit data.
     required: false
