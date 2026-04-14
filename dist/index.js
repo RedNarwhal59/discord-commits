@@ -13904,6 +13904,8 @@ let url = core.getInput("webhookUrl").replace("/github", "");
 let staffUrl = core.getInput("staffWebhookUrl").replace("/github", "");
 let testMessage = core.getInput("testMessage");
 let testType = core.getInput("testType") || "all";
+const WEBHOOK_USERNAME = "Commits";
+const WEBHOOK_AVATAR = "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png";
 let authorOverrides = {};
 try {
     authorOverrides = JSON.parse(core.getInput("authorOverrides") || "{}");
@@ -14059,7 +14061,7 @@ function hasFileData(commit) {
     return (((_a = commit.added) === null || _a === void 0 ? void 0 : _a.length) > 0) || (((_b = commit.modified) === null || _b === void 0 ? void 0 : _b.length) > 0) || (((_c = commit.removed) === null || _c === void 0 ? void 0 : _c.length) > 0);
 }
 function run() {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p;
+    var _a, _b, _c, _d, _e, _f;
     return __awaiter(this, void 0, void 0, function* () {
         if (testMessage) {
             yield sendTest();
@@ -14091,35 +14093,23 @@ function run() {
             if (isStaffOnly) {
                 staffEmbeds.push(embed);
                 if (staffEmbeds.length >= MAX_EMBEDS_PER_MESSAGE) {
-                    {
-                        let senderOv = applyOverride(sender, sender, senderUrl, (_h = (_g = data.sender) === null || _g === void 0 ? void 0 : _g.avatar_url) !== null && _h !== void 0 ? _h : "");
-                        yield sendEmbeds(staffEmbeds, senderOv.name, senderOv.avatar, staffUrl);
-                    }
+                    yield sendEmbeds(staffEmbeds, WEBHOOK_USERNAME, WEBHOOK_AVATAR, staffUrl);
                     staffEmbeds = [];
                 }
             }
             else {
                 embeds.push(embed);
                 if (embeds.length >= MAX_EMBEDS_PER_MESSAGE) {
-                    {
-                        let senderOv = applyOverride(sender, sender, senderUrl, (_k = (_j = data.sender) === null || _j === void 0 ? void 0 : _j.avatar_url) !== null && _k !== void 0 ? _k : "");
-                        yield sendEmbeds(embeds, senderOv.name, senderOv.avatar);
-                    }
+                    yield sendEmbeds(embeds, WEBHOOK_USERNAME, WEBHOOK_AVATAR);
                     embeds = [];
                 }
             }
         }
         if (embeds.length > 0) {
-            {
-                let senderOv = applyOverride(sender, sender, senderUrl, (_m = (_l = data.sender) === null || _l === void 0 ? void 0 : _l.avatar_url) !== null && _m !== void 0 ? _m : "");
-                yield sendEmbeds(embeds, senderOv.name, senderOv.avatar);
-            }
+            yield sendEmbeds(embeds, WEBHOOK_USERNAME, WEBHOOK_AVATAR);
         }
         if (staffEmbeds.length > 0) {
-            {
-                let senderOv = applyOverride(sender, sender, senderUrl, (_p = (_o = data.sender) === null || _o === void 0 ? void 0 : _o.avatar_url) !== null && _p !== void 0 ? _p : "");
-                yield sendEmbeds(staffEmbeds, senderOv.name, senderOv.avatar, staffUrl);
-            }
+            yield sendEmbeds(staffEmbeds, WEBHOOK_USERNAME, WEBHOOK_AVATAR, staffUrl);
         }
     });
 }

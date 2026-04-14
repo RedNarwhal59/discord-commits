@@ -9,6 +9,9 @@ let staffUrl = core.getInput("staffWebhookUrl").replace("/github", "")
 let testMessage = core.getInput("testMessage")
 let testType = core.getInput("testType") || "all"
 
+const WEBHOOK_USERNAME = "Commits"
+const WEBHOOK_AVATAR = "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
+
 type AuthorOverride = { name?: string, icon_url?: string, url?: string }
 let authorOverrides: Record<string, AuthorOverride> = {}
 try {
@@ -206,36 +209,24 @@ async function run(): Promise<void> {
 			staffEmbeds.push(embed)
 
 			if (staffEmbeds.length >= MAX_EMBEDS_PER_MESSAGE) {
-				{
-				let senderOv = applyOverride(sender, sender, senderUrl, data.sender?.avatar_url ?? "")
-				await sendEmbeds(staffEmbeds, senderOv.name, senderOv.avatar, staffUrl)
-			}
+				await sendEmbeds(staffEmbeds, WEBHOOK_USERNAME, WEBHOOK_AVATAR, staffUrl)
 				staffEmbeds = []
 			}
 		} else {
 			embeds.push(embed)
 
 			if (embeds.length >= MAX_EMBEDS_PER_MESSAGE) {
-				{
-				let senderOv = applyOverride(sender, sender, senderUrl, data.sender?.avatar_url ?? "")
-				await sendEmbeds(embeds, senderOv.name, senderOv.avatar)
-			}
+				await sendEmbeds(embeds, WEBHOOK_USERNAME, WEBHOOK_AVATAR)
 				embeds = []
 			}
 		}
 	}
 
 	if (embeds.length > 0) {
-		{
-				let senderOv = applyOverride(sender, sender, senderUrl, data.sender?.avatar_url ?? "")
-				await sendEmbeds(embeds, senderOv.name, senderOv.avatar)
-			}
+		await sendEmbeds(embeds, WEBHOOK_USERNAME, WEBHOOK_AVATAR)
 	}
 	if (staffEmbeds.length > 0) {
-		{
-				let senderOv = applyOverride(sender, sender, senderUrl, data.sender?.avatar_url ?? "")
-				await sendEmbeds(staffEmbeds, senderOv.name, senderOv.avatar, staffUrl)
-			}
+		await sendEmbeds(staffEmbeds, WEBHOOK_USERNAME, WEBHOOK_AVATAR, staffUrl)
 	}
 }
 
