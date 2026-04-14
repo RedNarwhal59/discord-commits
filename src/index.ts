@@ -9,6 +9,24 @@ let staffUrl = core.getInput("staffWebhookUrl").replace("/github", "")
 let testMessage = core.getInput("testMessage")
 let testType = core.getInput("testType") || "all"
 
+type AuthorOverride = { name?: string, icon_url?: string, url?: string }
+let authorOverrides: Record<string, AuthorOverride> = {}
+try {
+	authorOverrides = JSON.parse(core.getInput("authorOverrides") || "{}")
+} catch (e) {
+	core.warning(`authorOverrides is not valid JSON: ${e}`)
+}
+
+function applyOverride(login: string, name: string, authorUrl: string, avatar: string) {
+	let o = authorOverrides[login]
+	if (!o) return { name, authorUrl, avatar }
+	return {
+		name: o.name ?? name,
+		authorUrl: o.url ?? authorUrl,
+		avatar: o.icon_url ?? avatar
+	}
+}
+
 async function sendEmbeds(embeds: DiscordEmbed[], username: string, avatarUrl?: string, targetUrl?: string): Promise<void> {
 	let dest = targetUrl || url
 	if (!dest) return
@@ -171,39 +189,53 @@ async function run(): Promise<void> {
 			;(commit as any).removed = files.removed
 		}
 
-		let authorName = commit.author?.username ?? sender
-		let authorUrl = commit.author?.username
+		let login = commit.author?.username ?? sender
+		let baseName = commit.author?.username ?? sender
+		let baseUrl = commit.author?.username
 			? `https://github.com/${commit.author.username}`
 			: senderUrl
-		let authorAvatar = commit.author?.username
+		let baseAvatar = commit.author?.username
 			? `https://github.com/${commit.author.username}.png`
 			: senderAvatar
 
-		let embed = generateEmbed(commit, authorName, authorUrl, authorAvatar, repo, repoUrl, branch)
+		let overridden = applyOverride(login, baseName, baseUrl, baseAvatar)
+		let embed = generateEmbed(commit, overridden.name, overridden.authorUrl, overridden.avatar, repo, repoUrl, branch)
 		let isStaffOnly = commit.message.startsWith("!!") && staffUrl
 
 		if (isStaffOnly) {
 			staffEmbeds.push(embed)
 
 			if (staffEmbeds.length >= MAX_EMBEDS_PER_MESSAGE) {
-				await sendEmbeds(staffEmbeds, sender, data.sender?.avatar_url, staffUrl)
+				{
+				let senderOv = applyOverride(sender, sender, senderUrl, data.sender?.avatar_url ?? "")
+				await sendEmbeds(staffEmbeds, senderOv.name, senderOv.avatar, staffUrl)
+			}
 				staffEmbeds = []
 			}
 		} else {
 			embeds.push(embed)
 
 			if (embeds.length >= MAX_EMBEDS_PER_MESSAGE) {
-				await sendEmbeds(embeds, sender, data.sender?.avatar_url)
+				{
+				let senderOv = applyOverride(sender, sender, senderUrl, data.sender?.avatar_url ?? "")
+				await sendEmbeds(embeds, senderOv.name, senderOv.avatar)
+			}
 				embeds = []
 			}
 		}
 	}
 
 	if (embeds.length > 0) {
-		await sendEmbeds(embeds, sender, data.sender?.avatar_url)
+		{
+				let senderOv = applyOverride(sender, sender, senderUrl, data.sender?.avatar_url ?? "")
+				await sendEmbeds(embeds, senderOv.name, senderOv.avatar)
+			}
 	}
 	if (staffEmbeds.length > 0) {
-		await sendEmbeds(staffEmbeds, sender, data.sender?.avatar_url, staffUrl)
+		{
+				let senderOv = applyOverride(sender, sender, senderUrl, data.sender?.avatar_url ?? "")
+				await sendEmbeds(staffEmbeds, senderOv.name, senderOv.avatar, staffUrl)
+			}
 	}
 }
 

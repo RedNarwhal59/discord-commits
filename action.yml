@@ -15,6 +15,10 @@ inputs:
   testType:
     description: "Which commit type to test: all, normal, merge, or delete"
     required: false
+  authorOverrides:
+    description: "JSON map of GitHub login -> { name, icon_url, url } to replace embed author identity per commit."
+    required: false
+    default: "{}"
 runs:
   using: "node24"
   main: "dist/index.js"
