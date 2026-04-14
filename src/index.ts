@@ -10,7 +10,7 @@ let testMessage = core.getInput("testMessage")
 let testType = core.getInput("testType") || "all"
 
 const WEBHOOK_USERNAME = "Commits"
-const WEBHOOK_AVATAR = "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
+const WEBHOOK_AVATAR = "https://i.imgur.com/Fjr5RHq.jpeg"
 
 type AuthorOverride = { name?: string, icon_url?: string, url?: string }
 let authorOverrides: Record<string, AuthorOverride> = {}
