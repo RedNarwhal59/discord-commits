@@ -74,6 +74,13 @@ export function generateEmbed(
 		message = obfuscate(message.substring(1).trim())
 	}
 
+	// Strip Git's "Conflicts:" section from merge commit messages
+	// Git uses "# Conflicts:" (with # comment prefix) or plain "Conflicts:"
+	let conflictsMatch = message.match(/\n#?\s*Conflicts:\n/)
+	if (conflictsMatch && conflictsMatch.index !== undefined) {
+		message = message.substring(0, conflictsMatch.index).trimEnd()
+	}
+
 	// Split multi-line commit messages: first line is title, rest is extra detail
 	let lines = message.split("\n")
 	let title = lines[0]
